@@ -1,4 +1,4 @@
-package com.liang.rag.rag.splitter;
+package com.liang.rag.document.splitter;
 
 import lombok.Setter;
 import org.springframework.ai.document.Document;

@@ -1,4 +1,6 @@
-package com.liang.rag.rag.splitter;
+package com.liang.rag.document.splitter;
+
+import com.liang.rag.infra.snowflake.SnowflakeIdGenerator;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -83,7 +85,7 @@ public class ParentMarkdownSplitter extends AbstractMarkdownSplitter {
             } else {
                 // 保留完整父片段，标记跳过 Embedding
                 Map<String, Object> parentMeta = new HashMap<>(segment.metadata());
-                String parentChunkId = UUID.randomUUID().toString();
+                String parentChunkId = SnowflakeIdGenerator.getInstance().nextIdStr();
                 parentMeta.put(CHUNK_ID, parentChunkId);
                 parentMeta.put(SKIP_EMBEDDING, 1);
                 result.add(new DocumentChunk(content, parentMeta));
@@ -94,9 +96,8 @@ public class ParentMarkdownSplitter extends AbstractMarkdownSplitter {
                     int end = Math.min(start + chunkSize, content.length());
                     String subContent = content.substring(start, end);
 
-                    // TODO 使用雪花算法代替UUID
                     Map<String, Object> subMeta = new HashMap<>(segment.metadata());
-                    subMeta.put(CHUNK_ID, UUID.randomUUID().toString());
+                    subMeta.put(CHUNK_ID, SnowflakeIdGenerator.getInstance().nextIdStr());
                     subMeta.put(PARENT_CHUNK_ID, parentChunkId);
 
                     result.add(new DocumentChunk(subContent, subMeta));

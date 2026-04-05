@@ -1,4 +1,4 @@
-package com.liang.rag.config.minio;
+package com.liang.rag.config;
 
 import io.minio.MinioClient;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.liang.rag.config;
+package com.liang.rag.parser.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -6,8 +6,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * MinerU 文档解析服务配置属性
- *
- * @author liang
  */
 @Data
 @Component

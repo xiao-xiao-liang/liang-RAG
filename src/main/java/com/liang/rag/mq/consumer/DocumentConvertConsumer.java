@@ -2,7 +2,7 @@ package com.liang.rag.mq.consumer;
 
 import com.liang.rag.common.enums.DocumentStatus;
 import com.liang.rag.document.entity.KnowledgeDocument;
-import com.liang.rag.document.service.PDFProcessService;
+import com.liang.rag.parser.PDFProcessService;
 import com.liang.rag.document.service.KnowledgeDocumentService;
 import com.liang.rag.mq.constant.MqConstant;
 import com.liang.rag.mq.event.DocumentUploadEvent;

@@ -5,7 +5,7 @@ import com.liang.rag.document.entity.KnowledgeDocument;
 import com.liang.rag.document.service.KnowledgeDocumentService;
 import com.liang.rag.mq.constant.MqConstant;
 import com.liang.rag.mq.event.DocumentConvertEvent;
-import com.liang.rag.rag.service.VectorStoreService;
+import com.liang.rag.retrieval.service.VectorStoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;

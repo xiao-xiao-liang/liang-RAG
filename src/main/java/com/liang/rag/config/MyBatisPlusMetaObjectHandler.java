@@ -1,4 +1,4 @@
-package com.liang.rag.config.mybatisplus;
+package com.liang.rag.config;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 /**
  * MyBatis-Plus 字段自动填充处理器
  * <p>自动填充 createTime 和 updateTime 字段</p>
- *
- * @author liang
  */
 @Slf4j
 @Component

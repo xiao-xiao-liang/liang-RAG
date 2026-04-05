@@ -19,7 +19,7 @@ import com.liang.rag.mq.event.DocumentUploadEvent;
 import com.liang.rag.mq.producer.DocumentProcessProducer;
 import com.liang.rag.mq.transaction.DocumentTransactionContext;
 import com.liang.rag.mq.transaction.DocumentTransactionContext.TransactionAction;
-import com.liang.rag.rag.splitter.ParentMarkdownSplitter;
+import com.liang.rag.document.splitter.ParentMarkdownSplitter;
 import com.liang.rag.storage.FileStorageStrategy;
 import com.liang.rag.storage.ObjectNameResolver;
 import lombok.RequiredArgsConstructor;

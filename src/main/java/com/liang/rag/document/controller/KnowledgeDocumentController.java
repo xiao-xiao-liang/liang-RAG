@@ -5,7 +5,7 @@ import com.liang.rag.common.convention.result.Result;
 import com.liang.rag.common.convention.result.Results;
 import com.liang.rag.document.entity.KnowledgeDocument;
 import com.liang.rag.document.service.KnowledgeDocumentService;
-import com.liang.rag.rag.service.VectorStoreService;
+import com.liang.rag.retrieval.service.VectorStoreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;

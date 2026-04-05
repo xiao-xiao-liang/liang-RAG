@@ -1,6 +1,6 @@
-package com.liang.rag.document.service;
+package com.liang.rag.parser;
 
-import com.liang.rag.config.DocumentProcessProperties;
+import com.liang.rag.parser.config.DocumentProcessProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -25,8 +25,6 @@ import java.nio.file.Path;
  * 图片通过本地文件读取后以字节流方式发送给 LLM，
  * 无需图片可被外网访问（解决 MinIO 在内网场景下 LLM 无法获取图片的问题）。
  * </p>
- *
- * @author liang
  */
 @Slf4j
 @Service
@@ -38,16 +36,8 @@ public class ImageDescriptionService {
 
     /**
      * 读取本地图片并调用 qwen3-vl-plus 生成自然语言描述
-     * <p>
-     * 处理流程：
-     * 1. 读取本地图片文件为字节数组
-     * 2. 根据文件扩展名推断 MIME 类型
-     * 3. 构建包含图片的多模态消息，指定使用 qwen3-vl-plus 模型
-     * 4. 调用 LLM 获取图片描述
-     * 5. 如果调用失败，降级返回基于文件名的默认描述
-     * </p>
      *
-     * @param localImagePath 图片的本地文件路径（解压后的临时文件，尚未被清理）
+     * @param localImagePath 图片的本地文件路径
      * @param fileName       图片文件名（用于 MIME 推断和降级描述）
      * @return 图片的自然语言描述文本
      */
@@ -56,11 +46,9 @@ public class ImageDescriptionService {
             String visionModel = processProperties.getVisionModel();
             log.info("调用 {} 生成图片描述, fileName: {}", visionModel, fileName);
 
-            // 读取本地图片文件
             byte[] imageBytes = Files.readAllBytes(localImagePath);
             MimeType mimeType = guessImageMimeType(fileName);
 
-            // 构建 ChatClient，通过 options 覆盖模型为配置的视觉模型
             ChatClient chatClient = ChatClient.builder(chatModel).build();
 
             String description = chatClient.prompt()
@@ -83,9 +71,6 @@ public class ImageDescriptionService {
 
     /**
      * 根据文件扩展名推断图片的 MIME 类型
-     *
-     * @param fileName 文件名
-     * @return 对应的 MimeType
      */
     private MimeType guessImageMimeType(String fileName) {
         String lower = fileName.toLowerCase();

@@ -1,4 +1,4 @@
-package com.liang.rag.config.minio;
+package com.liang.rag.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 /**
  * MinIO 配置属性
  * <p>通过 {@code @ConfigurationProperties} 实现类型安全的配置绑定</p>
- *
- * @author liang
  */
 @Data
 @Component

@@ -1,7 +1,7 @@
 package com.liang.rag.storage.impl;
 
 import com.liang.rag.common.convention.exception.ServiceException;
-import com.liang.rag.config.minio.MinioProperties;
+import com.liang.rag.config.MinioProperties;
 import com.liang.rag.storage.FileStorageStrategy;
 import io.minio.*;
 import io.minio.http.Method;

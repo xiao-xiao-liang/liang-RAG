@@ -1,4 +1,4 @@
-package com.liang.rag.document.entity;
+package com.liang.rag.common.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -8,6 +8,11 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 实体基类
+ * <p>提供所有业务实体共享的审计字段和逻辑删除支持</p>
+ */
+@Data
 public class BaseEntity {
 
     /**

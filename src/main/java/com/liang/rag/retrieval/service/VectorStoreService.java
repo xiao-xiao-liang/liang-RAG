@@ -1,4 +1,4 @@
-package com.liang.rag.rag.service;
+package com.liang.rag.retrieval.service;
 
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.lang.Assert;

@@ -1,11 +1,11 @@
-package com.liang.rag.document.service;
+package com.liang.rag.parser;
 
 import com.liang.rag.common.constant.ContentTypeConstant;
 import com.liang.rag.common.convention.exception.RemoteException;
 import com.liang.rag.common.convention.exception.ServiceException;
 import com.liang.rag.common.enums.DocumentStatus;
-import com.liang.rag.config.DocumentProcessProperties;
-import com.liang.rag.config.MineruProperties;
+import com.liang.rag.parser.config.DocumentProcessProperties;
+import com.liang.rag.parser.config.MineruProperties;
 import com.liang.rag.document.entity.KnowledgeDocument;
 import com.liang.rag.document.mapper.KnowledgeDocumentMapper;
 import com.liang.rag.storage.FileStorageStrategy;

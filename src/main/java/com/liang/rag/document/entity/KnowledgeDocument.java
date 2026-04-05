@@ -1,6 +1,7 @@
 package com.liang.rag.document.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.liang.rag.common.entity.BaseEntity;
 import com.liang.rag.common.enums.DocumentStatus;
 import lombok.Data;
 
