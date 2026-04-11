@@ -1,6 +1,8 @@
 package com.liang.rag.mq.consumer;
 
+import com.alibaba.fastjson2.JSON;
 import com.liang.rag.common.enums.DocumentStatus;
+import com.liang.rag.document.entity.DocumentSplitParam;
 import com.liang.rag.document.entity.KnowledgeDocument;
 import com.liang.rag.document.service.KnowledgeDocumentService;
 import com.liang.rag.mq.constant.MqConstant;
@@ -15,12 +17,12 @@ import org.springframework.stereotype.Component;
 /**
  * 文档切分与向量化消费者
  * <p>
- * 监听【文件转换完成】事件，负责对 Markdown 文件进行切分，
+ * 监听 {@code DOCUMENT_CONVERT_TOPIC} 事件，负责对文档进行切分，
  * 并在切分成功后立刻执行向量化入库操作，打通 RAG 最后一步。
  * </p>
  * <p>
- * 改进：Event 只传 documentId，Consumer 内部从 DB 查询最新数据，
- * 避免 MQ 消息中的 Entity 快照过时问题。
+ * 触发方式：由用户通过 {@code POST /api/document/split/{documentId}} 接口手动发送 MQ 消息，
+ * 不再在上传/转换完成后自动触发。
  * </p>
  */
 @Slf4j
@@ -38,7 +40,7 @@ public class DocumentChunkConsumer implements RocketMQListener<DocumentConvertEv
     @Override
     public void onMessage(DocumentConvertEvent event) {
         Long documentId = event.getDocumentId();
-        log.info("MQ 消费开始: 文档转换成功事件, 准备提取切分并向量化, documentId: {}", documentId);
+        log.info("MQ 消费开始: 切分任务事件, 准备执行切分并向量化, documentId: {}", documentId);
 
         // 从 DB 查询最新文档数据，而非依赖 MQ 消息中的快照
         KnowledgeDocument document = knowledgeDocumentService.getById(documentId);
@@ -54,12 +56,18 @@ public class DocumentChunkConsumer implements RocketMQListener<DocumentConvertEv
         }
 
         try {
-            // 1. 切分文档
+            // 1. 解析切分参数
+            DocumentSplitParam param = null;
+            if (event.getSplitParamJson() != null && !event.getSplitParamJson().isBlank()) {
+                param = JSON.parseObject(event.getSplitParamJson(), DocumentSplitParam.class);
+            }
+
+            // 2. 切分文档
             log.info("开始执行文档切分, documentId: {}", documentId);
-            int splitCount = knowledgeDocumentService.splitDocument(documentId);
+            int splitCount = knowledgeDocumentService.splitDocument(documentId, param);
             log.info("文档切分完成, 切出片段数: {}, documentId: {}", splitCount, documentId);
 
-            // 2. 将切分好的片段存入向量数据库（需要重新查 DB 获取最新状态）
+            // 3. 将切分好的片段存入向量数据库（需要重新查 DB 获取最新状态）
             KnowledgeDocument updatedDoc = knowledgeDocumentService.getById(documentId);
             log.info("开始执行片段入库 (Embedding -> Milvus), documentId: {}", documentId);
             int storedCount = vectorStoreService.embedAndStore(updatedDoc);

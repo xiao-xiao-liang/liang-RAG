@@ -29,4 +29,9 @@ public class DocumentUploadEvent implements Serializable {
      * 上传用户
      */
     private String uploadUser;
+
+    /**
+     * 切分参数 JSON（用户手动触发切分时传入，为空则使用默认策略）
+     */
+    private String splitParamJson;
 }
