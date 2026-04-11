@@ -1,17 +1,18 @@
-package com.liang.rag.parser;
+package com.liang.rag.parser.impl;
 
 import com.liang.rag.common.constant.ContentTypeConstant;
 import com.liang.rag.common.convention.exception.RemoteException;
 import com.liang.rag.common.convention.exception.ServiceException;
 import com.liang.rag.common.enums.DocumentStatus;
-import com.liang.rag.parser.config.DocumentProcessProperties;
-import com.liang.rag.parser.config.MineruProperties;
 import com.liang.rag.document.entity.KnowledgeDocument;
 import com.liang.rag.document.mapper.KnowledgeDocumentMapper;
-import com.liang.rag.storage.FileStorageStrategy;
 import com.liang.rag.mq.event.DocumentConvertEvent;
 import com.liang.rag.mq.producer.DocumentProcessProducer;
-import com.liang.rag.mq.transaction.DocumentTransactionContext;
+import com.liang.rag.parser.FileProcessService;
+import com.liang.rag.parser.ImageDescriptionService;
+import com.liang.rag.parser.config.DocumentProcessProperties;
+import com.liang.rag.parser.config.MineruProperties;
+import com.liang.rag.storage.FileStorageStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
@@ -24,7 +25,6 @@ import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.util.Timeout;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.stereotype.Service;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -62,26 +62,29 @@ import java.util.zip.ZipInputStream;
  * </p>
  */
 @Slf4j
-@Service
 @RequiredArgsConstructor
-public class PDFProcessService {
+public abstract class MinerUProcessBaseServiceImpl implements FileProcessService {
 
     private static final String CONVERTED_FILE_DIR = "converted/";
 
-    /** 支持的图片文件扩展名集合 */
+    /**
+     * 支持的图片文件扩展名集合
+     */
     private static final Set<String> IMAGE_EXTENSIONS = Set.of(
             ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".tiff"
     );
 
-    /** Markdown 图片标签正则：匹配 ![alt text](image path) */
+    /**
+     * Markdown 图片标签正则：匹配 ![alt text](image path)
+     */
     private static final Pattern IMAGE_TAG_PATTERN = Pattern.compile("!\\[([^]]*)]\\(([^)]+)\\)");
 
-    private final FileStorageStrategy fileStorageStrategy;
-    private final KnowledgeDocumentMapper knowledgeDocumentMapper;
-    private final MineruProperties mineruProperties;
-    private final DocumentProcessProperties documentProcessProperties;
-    private final ImageDescriptionService imageDescriptionService;
-    private final DocumentProcessProducer documentProcessProducer;
+    protected final FileStorageStrategy fileStorageStrategy;
+    protected final KnowledgeDocumentMapper knowledgeDocumentMapper;
+    protected final MineruProperties mineruProperties;
+    protected final DocumentProcessProperties documentProcessProperties;
+    protected final ImageDescriptionService imageDescriptionService;
+    protected final DocumentProcessProducer documentProcessProducer;
 
     /**
      * 异步处理文档转换（PDF → ZIP → 解压 → 处理 → 上传 MinIO）
@@ -96,10 +99,12 @@ public class PDFProcessService {
      * 7. 更新文档状态为 CONVERTED，保存 MD 的 MinIO URL
      * </p>
      *
-     * @param document    文档实体
-     * @param inputStream PDF 文件输入流
+     * @param document       文档实体
+     * @param inputStream    PDF 文件输入流
+     * @param splitParamJson 切分参数 JSON（透传给下游切分消费者）
      */
-    public void processDocument(KnowledgeDocument document, InputStream inputStream) {
+    @Override
+    public void processDocument(KnowledgeDocument document, InputStream inputStream, String splitParamJson) {
         log.info("开始异步处理文档转换, docTitle: {}", document.getDocTitle());
 
         // 更新状态为转换中
@@ -160,19 +165,17 @@ public class PDFProcessService {
                 }
             }
 
-            // 步骤7-8：使用事务消息保证「DB UPDATE → CONVERTED」和「MQ 发送」的原子性
+            // 步骤7：更新文档状态为 CONVERTED 并发送 CONVERT_TOPIC 触发切分
             document.setStatus(DocumentStatus.CONVERTED);
             document.setConvertedDocUrl(convertedUrl);
+            knowledgeDocumentMapper.updateById(document);
 
-            DocumentConvertEvent event = DocumentConvertEvent.builder()
+            // 步骤8：发送转换完成事件，触发下游切分 + 向量化
+            DocumentConvertEvent convertEvent = DocumentConvertEvent.builder()
                     .documentId(document.getDocId())
+                    .splitParamJson(splitParamJson)
                     .build();
-            DocumentTransactionContext txCtx = DocumentTransactionContext.builder()
-                    .action(DocumentTransactionContext.TransactionAction.UPDATE)
-                    .document(document)
-                    .build();
-
-            documentProcessProducer.sendTransactionalConvertEvent(event, txCtx);
+            documentProcessProducer.sendDocumentConvertEvent(convertEvent);
             log.info("文档转换完成, docTitle: {}, convertedUrl: {}", document.getDocTitle(), convertedUrl);
 
         } catch (Exception e) {
@@ -334,7 +337,7 @@ public class PDFProcessService {
                 // 如果 alt text 为空，调用 LLM 生成图片描述
                 if (altText == null || altText.isBlank()) {
                     String fileName = Paths.get(imagePath).getFileName().toString();
-                    altText = imageDescriptionService.generateDescription(resolvedImagePath, fileName);
+                    altText = imageDescriptionService.generateDescription(minioUrl, fileName);
                     log.debug("为图片生成描述: {} → {}", fileName, altText);
                 }
                 // 替换为 ![描述](MinIO URL)
