@@ -9,14 +9,37 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 /**
  * 文档切分器工厂
  * <p>
- * 根据 {@link DocumentSplitParam} 中的参数选择对应的文档切分策略。
+ * 根据 {@link DocumentSplitParam} 中的参数选择对应的文档切分策略，
+ * 与 know-engine 的 {@code DocumentSplitterFactory} 保持功能对齐。
+ * </p>
+ * <p>
+ * 策略对照表（know-engine LangChain4j → liang-RAG Spring AI）：
+ * <ul>
+ *     <li>TITLE → {@link ParentMarkdownSplitter}（Markdown 标题切分 + 父子分段）</li>
+ *     <li>LENGTH → {@link TokenTextSplitter}（基于 Token 的长度切分，比 know-engine 的 WordSplitter 更适合 LLM 场景）</li>
+ *     <li>SEPARATOR → {@link RegexTextSplitter#fromSeparator}（按固定分隔符切分）</li>
+ *     <li>REGEX → {@link RegexTextSplitter}（按正则表达式切分）</li>
+ *     <li>SMART → {@link ParentMarkdownSplitter}（Markdown 标题切分，overlap 自动取 chunkSize 的 10%）</li>
+ * </ul>
  * </p>
  */
 @Slf4j
 public final class DocumentSplitterFactory {
 
+    /**
+     * 单个文档最大输入 Token 数上限，超出则截断
+     */
+    private static final int MAX_INPUT_SIZE = 10000;
+
     private DocumentSplitterFactory() {
         // 工具类禁止实例化
+    }
+
+    /**
+     * 创建基于 Token 的长度切分器
+     */
+    private static TokenTextSplitter createTokenSplitter(int chunkSize, int overlap) {
+        return new TokenTextSplitter(chunkSize, chunkSize, overlap, MAX_INPUT_SIZE, true);
     }
 
     /**
@@ -43,18 +66,27 @@ public final class DocumentSplitterFactory {
 
         return switch (splitType) {
             case TITLE -> new ParentMarkdownSplitter(chunkSize, overlap);
-            case LENGTH -> new TokenTextSplitter(chunkSize, chunkSize, overlap, 10000, true);
+            case LENGTH -> createTokenSplitter(chunkSize, overlap);
+            case SEPARATOR -> {
+                String separator = param.getSeparator();
+                if (separator == null || separator.isEmpty()) {
+                    log.warn("SEPARATOR 策略未指定分隔符, 降级为 LENGTH 策略");
+                    yield createTokenSplitter(chunkSize, overlap);
+                }
+                yield RegexTextSplitter.fromSeparator(separator, chunkSize, overlap);
+            }
             case REGEX -> {
-                log.warn("REGEX 切分策略尚未实现, 降级为 LENGTH 策略");
-                yield new TokenTextSplitter(chunkSize, chunkSize, overlap, 10000, true);
+                String regex = param.getRegex();
+                if (regex == null || regex.isBlank()) {
+                    log.warn("REGEX 策略未指定正则表达式, 降级为 LENGTH 策略");
+                    yield createTokenSplitter(chunkSize, overlap);
+                }
+                yield new RegexTextSplitter(regex, "\n\n", chunkSize, overlap);
             }
             case SMART -> {
-                log.warn("SMART 切分策略尚未实现, 降级为 LENGTH 策略");
-                yield new TokenTextSplitter(chunkSize, chunkSize, overlap, 10000, true);
-            }
-            case SEPARATOR -> {
-                log.warn("SEPARATOR 切分策略尚未实现, 降级为 LENGTH 策略");
-                yield new TokenTextSplitter(chunkSize, chunkSize, overlap, 10000, true);
+                // 对齐 know-engine: overlap 自动取 chunkSize 的 10%
+                int smartOverlap = (int) (chunkSize * 0.1);
+                yield new ParentMarkdownSplitter(chunkSize, smartOverlap);
             }
         };
     }
